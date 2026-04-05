@@ -1,0 +1,175 @@
+"use client";
+
+import { useState } from "react";
+import { motion } from "framer-motion";
+import type { BookingData } from "@/types";
+import { buildWhatsAppUrl } from "@/lib/whatsapp";
+import { CATEGORY_LABELS } from "@/lib/constants";
+
+type Props = {
+  booking: Omit<BookingData, "clientName" | "clientPhone" | "notes">;
+  onBack: () => void;
+};
+
+export default function ContactStep({ booking, onBack }: Props) {
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [notes, setNotes] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const isAccessories = booking.type === "accesorios";
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!name.trim() || !phone.trim()) return;
+
+    const fullBooking: BookingData = {
+      ...booking,
+      clientName: name.trim(),
+      clientPhone: phone.trim(),
+      notes: notes.trim(),
+    };
+
+    if (!isAccessories) {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await fetch("/api/reservations", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(fullBooking),
+        });
+        if (!res.ok) {
+          const data = await res.json();
+          setError(data.error ?? "Ocurrió un error. Intentá de nuevo.");
+          setLoading(false);
+          return;
+        }
+      } catch {
+        setError("No se pudo conectar. Intentá de nuevo.");
+        setLoading(false);
+        return;
+      }
+    }
+
+    const url = buildWhatsAppUrl(fullBooking);
+    window.open(url, "_blank");
+    setLoading(false);
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+    >
+      <button
+        onClick={onBack}
+        className="text-xs tracking-[0.2em] uppercase text-muted hover:text-foreground transition-colors duration-200 mb-10 flex items-center gap-2"
+      >
+        ← Volver
+      </button>
+
+      <h2 className="font-serif text-3xl font-light mb-2">Tus datos</h2>
+
+      {/* Summary */}
+      <div className="mb-10 p-6 border border-border text-xs text-muted space-y-1">
+        <p>
+          <span className="uppercase tracking-wider">Categoría:</span>{" "}
+          {CATEGORY_LABELS[booking.type]}
+        </p>
+        {!isAccessories && (
+          <>
+            <p>
+              <span className="uppercase tracking-wider">Fecha:</span>{" "}
+              {booking.date
+                ? new Date(booking.date + "T12:00:00").toLocaleDateString(
+                    "es-UY",
+                    { weekday: "long", day: "numeric", month: "long" }
+                  )
+                : "—"}
+            </p>
+            <p>
+              <span className="uppercase tracking-wider">Hora:</span>{" "}
+              {booking.timeSlot}hs
+            </p>
+          </>
+        )}
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-6 max-w-md">
+        <div>
+          <label className="block text-[10px] tracking-[0.25em] uppercase text-muted mb-2">
+            Nombre completo *
+          </label>
+          <input
+            type="text"
+            required
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Tu nombre"
+            className="w-full border border-border bg-transparent px-4 py-3 text-sm focus:outline-none focus:border-foreground transition-colors duration-200 placeholder:text-muted/50"
+          />
+        </div>
+
+        <div>
+          <label className="block text-[10px] tracking-[0.25em] uppercase text-muted mb-2">
+            Teléfono / WhatsApp *
+          </label>
+          <input
+            type="tel"
+            required
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            placeholder="09X XXX XXX"
+            className="w-full border border-border bg-transparent px-4 py-3 text-sm focus:outline-none focus:border-foreground transition-colors duration-200 placeholder:text-muted/50"
+          />
+        </div>
+
+        <div>
+          <label className="block text-[10px] tracking-[0.25em] uppercase text-muted mb-2">
+            Notas (opcional)
+          </label>
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            rows={3}
+            placeholder="Modelo que viste, talla, accesorios que necesitás..."
+            className="w-full border border-border bg-transparent px-4 py-3 text-sm focus:outline-none focus:border-foreground transition-colors duration-200 placeholder:text-muted/50 resize-none"
+          />
+        </div>
+
+        {error && (
+          <p className="text-xs text-red-500">{error}</p>
+        )}
+
+        <button
+          type="submit"
+          disabled={loading || !name.trim() || !phone.trim()}
+          className="w-full border border-foreground px-8 py-4 text-xs tracking-[0.3em] uppercase hover:bg-foreground hover:text-background transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-3"
+        >
+          {loading ? (
+            <span className="animate-pulse">Guardando turno...</span>
+          ) : (
+            <>
+              <svg
+                viewBox="0 0 24 24"
+                className="w-4 h-4 fill-current"
+              >
+                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+              </svg>
+              Confirmar por WhatsApp
+            </>
+          )}
+        </button>
+
+        <p className="text-[10px] text-muted text-center leading-relaxed">
+          Al confirmar, se abre WhatsApp con el detalle de tu reserva.
+          <br />
+          El pago se coordina en el local.
+        </p>
+      </form>
+    </motion.div>
+  );
+}
