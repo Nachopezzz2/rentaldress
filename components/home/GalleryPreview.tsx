@@ -4,14 +4,14 @@ import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { getInstagramFeed, getPostImageUrl, type BeholdPost } from "@/lib/instagram";
+import { getInstagramFeed, flattenPosts, getPostImageUrl, type BeholdPost } from "@/lib/instagram";
 
 export default function GalleryPreview() {
   const [posts, setPosts] = useState<BeholdPost[]>([]);
 
   useEffect(() => {
     getInstagramFeed().then((data) => {
-      setPosts(data.filter((p) => p.mediaType !== "VIDEO").slice(0, 6));
+      setPosts(flattenPosts(data).slice(0, 6));
     });
   }, []);
 

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
-import { getInstagramFeed, getPostImageUrl, type BeholdPost } from "@/lib/instagram";
+import { getInstagramFeed, flattenPosts, getPostImageUrl, type BeholdPost } from "@/lib/instagram";
 
 export default function PhotoGrid() {
   const [posts, setPosts] = useState<BeholdPost[]>([]);
@@ -12,7 +12,7 @@ export default function PhotoGrid() {
 
   useEffect(() => {
     getInstagramFeed().then((data) => {
-      setPosts(data.filter((p) => p.mediaType !== "VIDEO"));
+      setPosts(flattenPosts(data));
       setLoading(false);
     });
   }, []);

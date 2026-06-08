@@ -33,6 +33,16 @@ export async function getInstagramFeed(): Promise<BeholdPost[]> {
   }
 }
 
+// Expands CAROUSEL_ALBUM posts into their individual child images
+export function flattenPosts(posts: BeholdPost[]): BeholdPost[] {
+  return posts.flatMap((post) => {
+    if (post.mediaType === "CAROUSEL_ALBUM" && post.children?.length) {
+      return post.children.filter((c) => c.mediaType !== "VIDEO");
+    }
+    return post.mediaType !== "VIDEO" ? [post] : [];
+  });
+}
+
 export function getPostImageUrl(post: BeholdPost): string {
   return (
     post.sizes?.large?.mediaUrl ||
